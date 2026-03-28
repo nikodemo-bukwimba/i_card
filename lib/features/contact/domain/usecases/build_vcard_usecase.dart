@@ -1,106 +1,101 @@
 import '../entities/contact_entity.dart';
 
-/// ─────────────────────────────────────────────────────────────────────────────
-/// BuildVCardUseCase
+/// Generates a vCard 3.0 string suitable for QR codes and full NFC/share use.
 ///
-/// Generates a vCard 3.0 string.
-///
-/// Photo embedding strategy
-/// ────────────────────────
-/// Raw QR capacity at version 40, error-correction L ≈ 2 953 bytes.
-/// A base64 JPEG at 400 px ≈ 50–150 KB — far too large for a QR code.
-///
-/// Solution: when [includePhoto] is true we embed only the first
-/// [_maxPhotoBytes] bytes of the base64 string. Most contact apps parse the
-/// PHOTO field and render whatever bytes are present, so a truncated but
-/// still-decodable thumbnail (≤ 3 KB) transfers correctly.
-///
-/// For full-fidelity photo transfer (e.g. NFC / AirDrop) pass the entity
-/// as-is to toVCardFull() — no truncation.
-/// ─────────────────────────────────────────────────────────────────────────────
+/// Photo strategy:
+///   QR  → uses [ContactEntity.photoQrBase64] (60×60 px, ~1–1.5 KB base64)
+///           generated at pick time by EditPage via flutter_image_compress.
+///   Full → uses [ContactEntity.photoBase64]  (full display photo, no limit).
 class BuildVCardUseCase {
-  /// Maximum base64 bytes to embed in the QR PHOTO field (~2 KB decoded ≈ 1.5 KB image).
-  static const int _maxPhotoBytes = 2048;
-
   const BuildVCardUseCase();
 
-  /// [includePhoto] — embed photo in the vCard.
-  /// [qrSafe]      — truncate photo to QR-safe size (only used when includePhoto=true).
+  /// QR-safe vCard — uses ultra-small thumbnail, strict CRLF, compact payload.
+  /// Pass [includePhoto] true to embed the QR thumbnail (photoQrBase64).
   String call(
     ContactEntity contact, {
-    bool includePhoto = true,
+    bool includePhoto = true, // now ON by default — thumbnail is safe to embed
     bool qrSafe = true,
   }) {
-    final buf = StringBuffer()
-      ..writeln('BEGIN:VCARD')
-      ..writeln('VERSION:3.0')
-      ..writeln('FN:${contact.name}')
-      ..writeln('N:${_nameField(contact.name)}')
-      ..writeln('ORG:${contact.org}')
-      ..writeln('TITLE:${contact.title}')
-      ..writeln('TEL;TYPE=CELL:${contact.phone}');
-
-    if (contact.phone2.isNotEmpty) {
-      buf.writeln('TEL;TYPE=CELL:${contact.phone2}');
-    }
-
-    buf.writeln('EMAIL:${contact.email}');
-
-    if (contact.website.isNotEmpty)  buf.writeln('URL;TYPE=WORK:${contact.website}');
-    if (contact.whatsapp.isNotEmpty) buf.writeln('URL;TYPE=WhatsApp:${contact.whatsapp}');
-    if (contact.linkedin.isNotEmpty) buf.writeln('URL;TYPE=LinkedIn:${contact.linkedin}');
-    if (contact.address.isNotEmpty)  buf.writeln('ADR;TYPE=WORK:;;${contact.address};;;;');
-
-    buf.writeln('NOTE:${contact.tagline}');
-
-    if (includePhoto && contact.photoBase64.isNotEmpty) {
-      final photoData = qrSafe
-          ? _truncateForQr(contact.photoBase64)
-          : contact.photoBase64;
-      buf.writeln('PHOTO;ENCODING=BASE64;TYPE=JPEG:');
-      // vCard 3.0 spec: fold long lines with CRLF + space
-      buf.writeln(_foldLine(photoData));
-    }
-
-    buf.write('END:VCARD');
-    return buf.toString();
+    final embedPhoto = includePhoto && !qrSafe ||
+        includePhoto && qrSafe && contact.photoQrBase64.isNotEmpty;
+    return _build(contact, embedPhoto: embedPhoto, forQr: qrSafe);
   }
 
-  /// Full vCard for NFC / share-sheet — no photo truncation.
+  /// Full vCard for NFC / share-sheet — uses full display photo.
   String full(ContactEntity contact) =>
-      call(contact, includePhoto: true, qrSafe: false);
+      _build(contact, embedPhoto: true, forQr: false);
+
+  // ── Core builder ──────────────────────────────────────────────────────────
+
+  String _build(
+    ContactEntity contact, {
+    required bool embedPhoto,
+    required bool forQr,
+  }) {
+    final lines = <String>[
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'FN:${_escape(contact.name)}',
+      'N:${_nameField(contact.name)}',
+      if (contact.org.isNotEmpty) 'ORG:${_escape(contact.org)}',
+      if (contact.title.isNotEmpty) 'TITLE:${_escape(contact.title)}',
+      'TEL;TYPE=CELL,VOICE:${contact.phone}',
+      if (contact.phone2.isNotEmpty) 'TEL;TYPE=CELL,VOICE:${contact.phone2}',
+      if (contact.email.isNotEmpty) 'EMAIL;TYPE=INTERNET:${contact.email}',
+      if (contact.website.isNotEmpty) 'URL;TYPE=WORK:${contact.website}',
+      if (contact.whatsapp.isNotEmpty) 'X-WHATSAPP:${contact.whatsapp}',
+      if (contact.linkedin.isNotEmpty) 'X-LINKEDIN:${contact.linkedin}',
+      if (contact.address.isNotEmpty)
+        'ADR;TYPE=WORK:;;${_escape(contact.address)};;;;',
+      if (contact.tagline.isNotEmpty) 'NOTE:${_escape(contact.tagline)}',
+    ];
+
+    if (embedPhoto) {
+      // QR → use ultra-small thumbnail; Full → use display photo
+      final photoData = forQr
+          ? contact.photoQrBase64 // ← 60×60 px compressed thumbnail
+          : contact.photoBase64; // ← full display photo
+
+      if (photoData.isNotEmpty) {
+        lines.add('PHOTO;ENCODING=b;TYPE=JPEG:');
+        lines.addAll(_foldPhoto(photoData));
+      }
+    }
+
+    lines.add('END:VCARD');
+
+    // vCard 3.0 / RFC 6350 REQUIRES \r\n line endings — not just \n
+    return lines.join('\r\n');
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  String _escape(String s) => s
+      .replaceAll(r'\', r'\\')
+      .replaceAll(';', r'\;')
+      .replaceAll(',', r'\,')
+      .replaceAll('\n', r'\n');
+
   String _nameField(String name) {
     final parts = name.trim().split(' ');
-    if (parts.length == 1) return '${parts[0]};;;;';
-    final last  = parts.last;
-    final first = parts.sublist(0, parts.length - 1).join(' ');
+    if (parts.length == 1) return '${_escape(parts[0])};;;;';
+    final last = _escape(parts.last);
+    final first = _escape(parts.sublist(0, parts.length - 1).join(' '));
     return '$last;$first;;;';
   }
 
-  /// Truncate base64 to the first [_maxPhotoBytes] characters so the total
-  /// vCard string fits in a QR code.  The resulting bytes are still a valid
-  /// (partial) JPEG header that contact apps use to render a blurry thumbnail.
-  String _truncateForQr(String b64) {
-    if (b64.length <= _maxPhotoBytes) return b64;
-    // Ensure we don't cut mid base64 group (groups of 4 chars)
-    final safe = (_maxPhotoBytes ~/ 4) * 4;
-    return b64.substring(0, safe);
-  }
-
-  /// Fold long lines per RFC 2425 (75-char soft wrap).
-  String _foldLine(String input) {
-    const maxLen = 75;
-    final sb = StringBuffer();
+  /// Fold base64 photo data into 75-char continuation lines.
+  List<String> _foldPhoto(String b64) {
+    const maxLen = 74;
+    final result = <String>[];
     var offset = 0;
-    while (offset < input.length) {
-      final end = (offset + maxLen).clamp(0, input.length);
-      if (offset > 0) sb.write('\r\n '); // continuation line
-      sb.write(input.substring(offset, end));
+    while (offset < b64.length) {
+      final end = (offset + maxLen).clamp(0, b64.length);
+      result.add(offset == 0
+          ? b64.substring(0, end)
+          : ' ${b64.substring(offset, end)}');
       offset = end;
     }
-    return sb.toString();
+    return result;
   }
 }

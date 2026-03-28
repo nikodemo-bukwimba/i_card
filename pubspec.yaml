@@ -29,6 +29,9 @@ dependencies:
   # URL launching
   url_launcher: ^6.3.0
 
+  # Image compression for QR thumbnail
+  flutter_image_compress: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

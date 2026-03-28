@@ -13,7 +13,8 @@ class ContactLocalDataSourceImpl implements ContactLocalDataSource {
 
   static const _keys = [
     'name', 'title', 'org', 'phone', 'phone2', 'email',
-    'whatsapp', 'website', 'linkedin', 'address', 'tagline', 'photoBase64',
+    'whatsapp', 'website', 'linkedin', 'address', 'tagline',
+    'photoBase64', 'photoQrBase64', // ← added
   ];
 
   @override
