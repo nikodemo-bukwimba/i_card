@@ -12,6 +12,10 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../contact/domain/entities/contact_entity.dart';
 import '../widgets/color_preview_widget.dart';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../portfolio/presentation/bloc/portfolio_bloc.dart';
+import '../../../portfolio/presentation/pages/portfolio_edit_page.dart';
+
 class EditPage extends StatefulWidget {
   final ContactEntity contact;
   final BrandConfig brand;
@@ -41,7 +45,7 @@ class _EditPageState extends State<EditPage>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 4, vsync: this);
     _photoBase64 = widget.contact.photoBase64;
     _photoQrBase64 = widget.contact.photoQrBase64; // ← new
 
@@ -93,13 +97,14 @@ class _EditPageState extends State<EditPage>
     setState(() => _compressing = true);
 
     try {
+      // Full display photo — always read as-is
       final bytes = await File(picked.path).readAsBytes();
       final displayBase64 = base64Encode(bytes);
 
       String qrBase64 = '';
 
-      // flutter_image_compress only works on Android and iOS
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        // Mobile only: flutter_image_compress not supported on desktop/web
         final compressed = await FlutterImageCompress.compressWithFile(
           picked.path,
           minWidth: 60,
@@ -108,20 +113,8 @@ class _EditPageState extends State<EditPage>
           format: CompressFormat.jpeg,
         );
         qrBase64 = compressed != null ? base64Encode(compressed) : '';
-      } else {
-        // Desktop/Web fallback — use image_picker's built-in compression
-        // (already applied via imageQuality above); re-pick at small size
-        final small = await _picker.pickImage(
-          source: ImageSource.gallery,
-          maxWidth: 60,
-          maxHeight: 60,
-          imageQuality: 25,
-        );
-        if (small != null) {
-          final smallBytes = await File(small.path).readAsBytes();
-          qrBase64 = base64Encode(smallBytes);
-        }
       }
+      // Desktop/Web: qrBase64 stays '' — QR renders without photo (still scannable)
 
       setState(() {
         _photoBase64 = displayBase64;
@@ -498,6 +491,7 @@ class _EditPageState extends State<EditPage>
             Tab(icon: Icon(Icons.person_outline, size: 18), text: 'Contact'),
             Tab(icon: Icon(Icons.palette_outlined, size: 18), text: 'Brand'),
             Tab(icon: Icon(Icons.info_outline, size: 18), text: 'About'),
+            Tab(icon: Icon(Icons.folder_outlined, size: 18), text: 'Portfolio'),
           ],
         ),
       ),
@@ -507,6 +501,10 @@ class _EditPageState extends State<EditPage>
           _buildContactTab(),
           _buildBrandTab(),
           _buildAboutTab(),
+          BlocProvider.value(
+            value: context.read<PortfolioBloc>(),
+            child: const PortfolioEditPage(),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(

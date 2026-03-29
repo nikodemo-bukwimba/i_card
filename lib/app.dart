@@ -10,6 +10,10 @@ import 'features/brand/presentation/bloc/brand_event.dart';
 import 'features/brand/presentation/bloc/brand_state.dart';
 import 'features/card/presentation/pages/card_home_page.dart';
 import 'features/contact/presentation/bloc/contact_bloc.dart';
+import 'features/portfolio/presentation/bloc/portfolio_bloc.dart';
+import 'features/portfolio/presentation/bloc/portfolio_event.dart';
+import 'features/contacts_book/presentation/bloc/contacts_book_bloc.dart';
+import 'features/contacts_book/presentation/bloc/contacts_book_event.dart';
 
 class IssubiApp extends StatelessWidget {
   const IssubiApp({super.key});
@@ -19,19 +23,26 @@ class IssubiApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) =>
-              sl<BrandBloc>()..add(const BrandLoadRequested()),
+          create: (_) => sl<BrandBloc>()..add(const BrandLoadRequested()),
         ),
         BlocProvider(
           create: (_) => sl<ContactBloc>(),
+        ),
+        BlocProvider(
+          create: (_) =>
+              sl<PortfolioBloc>()..add(const PortfolioLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) =>
+              sl<ContactsBookBloc>()..add(const ContactsBookLoadRequested()),
         ),
       ],
       child: BlocBuilder<BrandBloc, BrandState>(
         builder: (context, brandState) {
           final brand = switch (brandState) {
             BrandLoaded(:final brand) => brand,
-            BrandSaved(:final brand)  => brand,
-            _                         => const BrandConfig(),
+            BrandSaved(:final brand) => brand,
+            _ => const BrandConfig(),
           };
 
           return MaterialApp(
@@ -39,7 +50,7 @@ class IssubiApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
 
             // ── Respond to phone system theme automatically ────────────────
-            theme:     AppTheme.light,
+            theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: ThemeMode.system, // follows OS light/dark setting
 

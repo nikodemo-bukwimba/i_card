@@ -4,9 +4,17 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  # mobile_scanner 7.x requires Dart >=3.7.0 (Flutter >=3.29.0)
+  sdk: ">=3.7.0 <4.0.0"
 
 dependencies:
+  # UPGRADED 5.2.3 → 7.2.0 (fixes scanner freezing, orientation bugs,
+  # iOS crashes, adds auto-zoom + tap-to-focus)
+  # BREAKING: Android minSDK is now 23, errorBuilder signature changed
+  mobile_scanner: ^7.2.0
+
+  uuid: ^4.4.0
+
   flutter:
     sdk: flutter
 
@@ -32,10 +40,43 @@ dependencies:
   # Image compression for QR thumbnail
   flutter_image_compress: ^2.3.0
 
+  flutter_native_splash: ^2.4.0
+
+  # KEPT at 1.x — v2.0 is a full API rewrite released days ago,
+  # not worth the migration risk. v1 works fine for our use case.
+  flutter_contacts: ^1.1.9
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  windows:
+    generate: true
+    image_path: "assets/images/app_icon_1024.png"
+    icon_size: 48
+  image_path: "assets/images/app_icon_1024.png"
+  # mobile_scanner 7.1.3+ requires Android minSDK 23
+  min_sdk_android: 23
+  adaptive_icon_background: "#0E0D1A"
+  adaptive_icon_foreground: "assets/images/app_icon_1024.png"
+
+flutter_native_splash:
+  color: "#0E0D1A"
+  image: assets/images/splash_final.png
+  fullscreen: true
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+  android: true
+  ios: true
+  web: false
+  android_12:
+    color: "#0E0D1A"
+    image: assets/images/app_icon_1024.png

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import '../entities/contact_entity.dart';
+import '../../../portfolio/domain/entities/portfolio_item.dart';
 
 /// Generates a vCard 3.0 string suitable for QR codes and full NFC/share use.
 ///
@@ -6,24 +8,48 @@ import '../entities/contact_entity.dart';
 ///   QR  → uses [ContactEntity.photoQrBase64] (60×60 px, ~1–1.5 KB base64)
 ///           generated at pick time by EditPage via flutter_image_compress.
 ///   Full → uses [ContactEntity.photoBase64]  (full display photo, no limit).
+///
+/// Portfolio strategy:
+///   Items are embedded as a compact JSON array in a custom X-PORTFOLIO field.
+///   Only type + title + url are stored (no descriptions/thumbnails) to stay
+///   within QR capacity. The ParseVCardUseCase reads this field on scan.
 class BuildVCardUseCase {
   const BuildVCardUseCase();
 
   /// QR-safe vCard — uses ultra-small thumbnail, strict CRLF, compact payload.
-  /// Pass [includePhoto] true to embed the QR thumbnail (photoQrBase64).
+  /// [portfolioItems] — pass current list from PortfolioBloc state.
+  /// [includePhoto]   — embed QR thumbnail (photoQrBase64).
   String call(
     ContactEntity contact, {
-    bool includePhoto = true, // now ON by default — thumbnail is safe to embed
+    List<PortfolioItem> portfolioItems = const [],
+    bool includePhoto = true,
     bool qrSafe = true,
   }) {
-    final embedPhoto = includePhoto && !qrSafe ||
-        includePhoto && qrSafe && contact.photoQrBase64.isNotEmpty;
-    return _build(contact, embedPhoto: embedPhoto, forQr: qrSafe);
+    // Only embed photo if QR thumbnail exists AND is small enough
+    final qrPhoto = contact.photoQrBase64;
+    final canEmbed = includePhoto &&
+        qrPhoto.isNotEmpty &&
+        qrPhoto.length <= 2048; // hard cap: ~1.5 KB decoded
+
+    return _build(
+      contact,
+      portfolioItems: portfolioItems,
+      embedPhoto: canEmbed,
+      forQr: true,
+    );
   }
 
-  /// Full vCard for NFC / share-sheet — uses full display photo.
-  String full(ContactEntity contact) =>
-      _build(contact, embedPhoto: true, forQr: false);
+  /// Full vCard for NFC / share-sheet — uses full display photo, no truncation.
+  String full(
+    ContactEntity contact, {
+    List<PortfolioItem> portfolioItems = const [],
+  }) =>
+      _build(
+        contact,
+        portfolioItems: portfolioItems,
+        embedPhoto: true,
+        forQr: false,
+      );
 
   // ── Core builder ──────────────────────────────────────────────────────────
 
@@ -31,6 +57,7 @@ class BuildVCardUseCase {
     ContactEntity contact, {
     required bool embedPhoto,
     required bool forQr,
+    List<PortfolioItem> portfolioItems = const [],
   }) {
     final lines = <String>[
       'BEGIN:VCARD',
@@ -50,14 +77,24 @@ class BuildVCardUseCase {
       if (contact.tagline.isNotEmpty) 'NOTE:${_escape(contact.tagline)}',
     ];
 
+    // ── Portfolio — compact JSON, title+type+url only to stay QR-safe ────────
+    if (portfolioItems.isNotEmpty) {
+      final compact = portfolioItems
+          .map((e) => {'t': e.type.name, 'n': e.title, 'u': e.url})
+          .toList();
+      lines.add('X-PORTFOLIO:${jsonEncode(compact)}');
+    }
+
+    // ── Photo ─────────────────────────────────────────────────────────────────
     if (embedPhoto) {
       // QR → use ultra-small thumbnail; Full → use display photo
       final photoData = forQr
-          ? contact.photoQrBase64 // ← 60×60 px compressed thumbnail
-          : contact.photoBase64; // ← full display photo
+          ? contact.photoQrBase64 // 60×60 px compressed thumbnail
+          : contact.photoBase64; // full display photo
 
       if (photoData.isNotEmpty) {
-        lines.add('PHOTO;ENCODING=b;TYPE=JPEG:');
+        lines.add(
+            'PHOTO;ENCODING=b;TYPE=JPEG:'); // vCard 3.0: ENCODING=b not BASE64
         lines.addAll(_foldPhoto(photoData));
       }
     }
@@ -84,7 +121,7 @@ class BuildVCardUseCase {
     return '$last;$first;;;';
   }
 
-  /// Fold base64 photo data into 75-char continuation lines.
+  /// Fold base64 photo data into 75-char continuation lines per RFC 2425.
   List<String> _foldPhoto(String b64) {
     const maxLen = 74;
     final result = <String>[];

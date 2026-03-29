@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'config/di/injection_container.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 Future<void> main() async {
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
   WidgetsFlutterBinding.ensureInitialized();
 
   // Portrait only
@@ -21,5 +24,6 @@ Future<void> main() async {
   // Boot dependency injection (StorageService.init is awaited inside)
   await initDependencies();
 
+  FlutterNativeSplash.remove();
   runApp(const IssubiApp());
 }
