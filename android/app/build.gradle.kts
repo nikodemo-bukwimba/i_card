@@ -33,7 +33,7 @@ android {
         applicationId = "com.issubi.i_card"
 
         // ✅ FORCE this (important for mobile_scanner)
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
 
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
