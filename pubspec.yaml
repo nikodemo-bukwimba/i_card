@@ -46,6 +46,8 @@ dependencies:
   # not worth the migration risk. v1 works fine for our use case.
   flutter_contacts: ^1.1.9
 
+  nfc_manager: ^3.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

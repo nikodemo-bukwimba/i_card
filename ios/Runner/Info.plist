@@ -29,6 +29,8 @@
 		<key>UIApplicationSceneManifest</key>
 		<key>NSContactsUsageDescription</key>
 		<string>Inahitajika kuhifadhi contact kwenye phone book yako</string>
+		<key>NFCReaderUsageDescription</key>
+		<string>Tunahitaji NFC kusambaza kadi yako kwa watu wengine</string>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>
 			<false/>

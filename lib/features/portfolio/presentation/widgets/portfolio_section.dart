@@ -46,16 +46,23 @@ class _PortfolioGrid extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               children: [
-                const Text('PORTFOLIO YA KAZI',
-                    style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 9,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w500)),
+                const Text(
+                  'PORTFOLIO YA KAZI',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const Spacer(),
-                Text('${items.length} items',
-                    style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 10)),
+                Text(
+                  '${items.length} items',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),
@@ -83,31 +90,31 @@ class _ItemCard extends StatelessWidget {
   const _ItemCard({required this.item, required this.brand});
 
   static const _typeLabel = {
-    PortfolioItemType.video:    'video',
+    PortfolioItemType.video: 'video',
     PortfolioItemType.document: 'document',
-    PortfolioItemType.website:  'website',
-    PortfolioItemType.image:    'image',
+    PortfolioItemType.website: 'website',
+    PortfolioItemType.image: 'image',
   };
 
   static const _typeColor = {
-    PortfolioItemType.video:    Color(0xFF3C3489),
+    PortfolioItemType.video: Color(0xFF3C3489),
     PortfolioItemType.document: Color(0xFF085041),
-    PortfolioItemType.website:  Color(0xFF633806),
-    PortfolioItemType.image:    Color(0xFF712B13),
+    PortfolioItemType.website: Color(0xFF633806),
+    PortfolioItemType.image: Color(0xFF712B13),
   };
 
   static const _typeBg = {
-    PortfolioItemType.video:    Color(0xFFEEEDFE),
+    PortfolioItemType.video: Color(0xFFEEEDFE),
     PortfolioItemType.document: Color(0xFFE1F5EE),
-    PortfolioItemType.website:  Color(0xFFFAEEDA),
-    PortfolioItemType.image:    Color(0xFFFAECE7),
+    PortfolioItemType.website: Color(0xFFFAEEDA),
+    PortfolioItemType.image: Color(0xFFFAECE7),
   };
 
   static const _typeIcon = {
-    PortfolioItemType.video:    Icons.play_circle_outline,
+    PortfolioItemType.video: Icons.play_circle_outline,
     PortfolioItemType.document: Icons.description_outlined,
-    PortfolioItemType.website:  Icons.language_outlined,
-    PortfolioItemType.image:    Icons.image_outlined,
+    PortfolioItemType.website: Icons.language_outlined,
+    PortfolioItemType.image: Icons.image_outlined,
   };
 
   Future<void> _open() async {
@@ -119,10 +126,10 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg    = _typeBg[item.type]!;
-    final color = _typeColor[item.type]!;
-    final icon  = _typeIcon[item.type]!;
-    final label = _typeLabel[item.type]!;
+    final icon = _typeIcon[item.type] ?? Icons.link_outlined;
+    final bg = _typeBg[item.type] ?? const Color(0xFF1A1828);
+    final color = _typeColor[item.type] ?? AppColors.purpleMid;
+    final label = _typeLabel[item.type] ?? 'link';
 
     return GestureDetector(
       onTap: _open,
@@ -141,8 +148,9 @@ class _ItemCard extends StatelessWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: bg.withOpacity(0.15),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(11)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(11),
+                  ),
                 ),
                 child: Icon(icon, color: color.withOpacity(0.7), size: 28),
                 alignment: Alignment.center,
@@ -154,25 +162,34 @@ class _ItemCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title,
-                      style: const TextStyle(
-                          color: AppColors.textLight,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: AppColors.textLight,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 3),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: bg.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(label,
-                        style: TextStyle(
-                            color: color, fontSize: 10,
-                            fontWeight: FontWeight.w500)),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ),
